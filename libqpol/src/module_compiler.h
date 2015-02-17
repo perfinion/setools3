@@ -117,6 +117,7 @@ int begin_optional_else(int pass);
  * return -1. */
 int end_avrule_block(int pass);
 
+void append_filename_trans(filename_trans_rule_t * filename_trans_rules);
 #ifdef	__cplusplus
 }
 #endif
