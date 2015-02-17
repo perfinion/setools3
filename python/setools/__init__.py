@@ -2,8 +2,8 @@
 
 # Author: Thomas Liu <tliu@redhat.com>
 
-import _sesearch
-import _seinfo
+from setools import _sesearch
+from setools import _seinfo
 import types
 
 TYPE = _seinfo.TYPE
