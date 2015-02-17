@@ -52,7 +52,7 @@
 #ifdef SWIGPYTHON
 
 %typemap(out) time_t {
-	$result = PyInt_FromLong((long) $1);
+	$result = PyLong_FromLong((long) $1);
 }
 
 #endif  // end of python specific code

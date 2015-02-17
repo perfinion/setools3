@@ -65,7 +65,97 @@ enum opt_values
 	EXPR_ROLE_SOURCE, EXPR_ROLE_TARGET
 };
 
-;
+struct module_state {
+    PyObject *error;
+};
+
+PyObject* sesearch(bool allow,
+             bool neverallow, 
+             bool auditallow,
+             bool dontaudit,
+             const char *src_name,
+             const char *tgt_name,
+             const char *class_name,
+             const char *permlist
+             );
+
+static int Dict_ContainsInt(PyObject *dict, const char *key){
+    PyObject *item = PyDict_GetItemString(dict, key);
+    if (item)
+        return PyLong_AsLong(item);
+    return false;
+}
+
+static const char *Dict_ContainsString(PyObject *dict, const char *key){
+    PyObject *item = PyDict_GetItemString(dict, key);
+    if (item)
+#if PY_MAJOR_VERSION >= 3
+        return PyBytes_AS_STRING(PyUnicode_AsEncodedString(item, "utf-8", "Error ~"));
+#else
+	return PyString_AsString(item);
+#endif
+    return NULL;
+}
+
+
+#if PY_MAJOR_VERSION >= 3
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+#else
+#define GETSTATE(m) (&_state)
+static struct module_state _state;
+#endif
+
+PyObject *wrap_sesearch(PyObject *self, PyObject *args){
+    PyObject *dict;
+    if (!PyArg_ParseTuple(args, "O", &dict))
+        return NULL;
+    int allow = Dict_ContainsInt(dict, "allow");
+    int neverallow = Dict_ContainsInt(dict, "neverallow");
+    int auditallow = Dict_ContainsInt(dict, "auditallow");
+    int dontaudit = Dict_ContainsInt(dict, "dontaudit"); 
+   
+    const char *src_name = Dict_ContainsString(dict, "scontext");
+    const char *tgt_name = Dict_ContainsString(dict, "tcontext");
+    const char *class_name = Dict_ContainsString(dict, "class");
+    const char *permlist = Dict_ContainsString(dict, "permlist");
+    
+    return Py_BuildValue("O",sesearch(allow, neverallow, auditallow, dontaudit, src_name, tgt_name, class_name, permlist));
+
+}
+
+static PyMethodDef methods[] = {
+    {"sesearch", (PyCFunction) wrap_sesearch, METH_VARARGS},
+    {NULL, NULL, 0, NULL}
+};
+
+#if PY_MAJOR_VERSION >= 3
+
+static int _sesearch_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+};
+
+static int _sesearch_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+};
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "_sesearch",
+        NULL,
+        sizeof(struct module_state),
+        methods,
+        NULL,
+        _sesearch_traverse,
+        _sesearch_clear,
+        NULL
+};
+
+#define INITERROR return NULL
+#else
+#define INITERROR return
+#endif
 
 typedef struct options
 {
@@ -237,25 +327,25 @@ static PyObject* get_av_results(const apol_policy_t * policy, const options_t * 
 		
 		qpol_avrule_get_rule_type(q, rule, &rule_type);
 		tmp_name = apol_rule_type_to_str(rule_type);
-		PyObject *obj = PyString_FromString(tmp_name);
+		PyObject *obj = PyUnicode_FromString(tmp_name);
 		PyDict_SetItemString(dict, "type", obj);
 		Py_DECREF(obj);
 		// source
 		qpol_avrule_get_source_type(q, rule, &type);
 		qpol_type_get_name(q, type, &tmp_name);
-		obj = PyString_FromString(tmp_name);
+		obj = PyUnicode_FromString(tmp_name);
 		PyDict_SetItemString(dict, "scontext", obj);
 		Py_DECREF(obj);
 		
 		qpol_avrule_get_target_type(q, rule, &type);
 		qpol_type_get_name(q, type, &tmp_name);
-		obj = PyString_FromString(tmp_name);
+		obj = PyUnicode_FromString(tmp_name);
 		PyDict_SetItemString(dict, "tcontext", obj);
 		Py_DECREF(obj);
 		
 		qpol_avrule_get_object_class(q, rule, &obj_class);
 		qpol_type_get_name(q, type, &tmp_name);
-		obj = PyString_FromString(tmp_name);
+		obj = PyUnicode_FromString(tmp_name);
 		PyDict_SetItemString(dict, "class", obj);
 		Py_DECREF(obj);
 		qpol_avrule_get_perm_iter(q, rule, &iter);
@@ -263,7 +353,7 @@ static PyObject* get_av_results(const apol_policy_t * policy, const options_t * 
 		for (; !qpol_iterator_end(iter); qpol_iterator_next(iter)) {
 			const char *perm_name = NULL;
 			qpol_iterator_get_item(iter, (void **)&perm_name);
-			obj = PyString_FromString(perm_name);
+			obj = PyUnicode_FromString(perm_name);
 			PyList_Append(permlist, obj);
 			Py_DECREF(obj);
 		}
@@ -435,44 +525,17 @@ PyObject* sesearch(bool allow,
 	if (output) return output;
 	return Py_None;
 }
-static int Dict_ContainsInt(PyObject *dict, const char *key){
-    PyObject *item = PyDict_GetItemString(dict, key);
-    if (item)
-        return PyInt_AsLong(item);
-    return false;
-}
 
-static const char *Dict_ContainsString(PyObject *dict, const char *key){
-    PyObject *item = PyDict_GetItemString(dict, key);
-    if (item)
-        return PyString_AsString(item);
-    return NULL;
-}
+#if PY_MAJOR_VERSION >= 3
+PyObject * PyInit__sesearch(void) {
+#else
+void init_sesearch() {
+#endif
 
-PyObject *wrap_sesearch(PyObject *self, PyObject *args){
-    PyObject *dict;
-    if (!PyArg_ParseTuple(args, "O", &dict))
-        return NULL;
-    int allow = Dict_ContainsInt(dict, "allow");
-    int neverallow = Dict_ContainsInt(dict, "neverallow");
-    int auditallow = Dict_ContainsInt(dict, "auditallow");
-    int dontaudit = Dict_ContainsInt(dict, "dontaudit"); 
-   
-    const char *src_name = Dict_ContainsString(dict, "scontext");
-    const char *tgt_name = Dict_ContainsString(dict, "tcontext");
-    const char *class_name = Dict_ContainsString(dict, "class");
-    const char *permlist = Dict_ContainsString(dict, "permlist");
-    
-    return Py_BuildValue("O",sesearch(allow, neverallow, auditallow, dontaudit, src_name, tgt_name, class_name, permlist));
-
-}
-
-static PyMethodDef methods[] = {
-    {"sesearch", (PyCFunction) wrap_sesearch, METH_VARARGS},
-    {NULL, NULL, 0, NULL}
-};
-
-void init_sesearch(){
-    PyObject *m;
-    m = Py_InitModule("_sesearch", methods);
+#if PY_MAJOR_VERSION >= 3
+    PyObject *m = PyModule_Create(&moduledef);
+    return m;
+#else
+    PyObject *m = Py_InitModule("_sesearch", methods);
+#endif
 }

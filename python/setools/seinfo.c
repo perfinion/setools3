@@ -53,6 +53,65 @@
 #define COPYRIGHT_INFO "Copyright (C) 2003-2007 Tresys Technology, LLC"
 static char *policy_file = NULL;
 
+struct module_state {
+    PyObject *error;
+};
+
+PyObject* seinfo(int type, const char *name);
+
+#if PY_MAJOR_VERSION >= 3
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+#else
+#define GETSTATE(m) (&_state)
+static struct module_state _state;
+#endif
+
+PyObject *wrap_seinfo(PyObject *self, PyObject *args){
+    unsigned int type;
+    char *name;
+    
+    if (!PyArg_ParseTuple(args, "iz", &type, &name))
+        return NULL;
+
+    return Py_BuildValue("O",seinfo(type, name));
+
+}
+
+static PyMethodDef methods[] = {
+    {"seinfo", (PyCFunction) wrap_seinfo, METH_VARARGS},
+    {NULL, NULL, 0, NULL}
+};
+
+#if PY_MAJOR_VERSION >= 3
+
+static int _seinfo_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+};
+
+static int _seinfo_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+};
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "_seinfo",
+        NULL,
+        sizeof(struct module_state),
+        methods,
+        NULL,
+        _seinfo_traverse,
+        _seinfo_clear,
+        NULL
+};
+
+#define INITERROR return NULL
+
+#else
+#define INITERROR return
+#endif
+
 enum input
 {
 	TYPE, ATTRIBUTE, ROLE, USER, PORT,
@@ -77,7 +136,7 @@ static PyObject* get_attr(const qpol_type_t * type_datum, const apol_policy_t * 
 
 	if (qpol_type_get_name(q, type_datum, &attr_name))
 		goto cleanup;
-	PyObject *obj = PyString_FromString(attr_name);
+	PyObject *obj = PyUnicode_FromString(attr_name);
 	PyDict_SetItemString(dict, "name", obj);
 	Py_DECREF(obj);
 
@@ -93,7 +152,7 @@ static PyObject* get_attr(const qpol_type_t * type_datum, const apol_policy_t * 
 				goto cleanup;
 			if (qpol_type_get_name(q, attr_datum, &type_name))
 				goto cleanup;
-			PyObject *obj = PyString_FromString(type_name);
+			PyObject *obj = PyUnicode_FromString(type_name);
 			PyList_Append(list, obj);
 			Py_DECREF(obj);
 		}
@@ -210,7 +269,7 @@ static PyObject* get_type_attrs(const qpol_type_t * type_datum, const apol_polic
 			goto cleanup;
 		if (qpol_type_get_name(q, attr_datum, &attr_name))
 			goto cleanup;
-		PyObject *obj = PyString_FromString(attr_name);
+		PyObject *obj = PyUnicode_FromString(attr_name);
 		PyList_Append(list, obj);
 		Py_DECREF(obj);
 	}
@@ -237,7 +296,7 @@ static PyObject* get_type( const qpol_type_t * type_datum, const apol_policy_t *
 	if (qpol_type_get_ispermissive(q, type_datum, &ispermissive))
 		goto cleanup;
 
-	PyObject *obj = PyString_FromString(type_name);
+	PyObject *obj = PyUnicode_FromString(type_name);
 	PyDict_SetItemString(dict, "name", obj);
 	Py_DECREF(obj);
 	obj = PyBool_FromLong(ispermissive);
@@ -279,7 +338,7 @@ static PyObject* get_user(const qpol_user_t * user_datum, const apol_policy_t * 
 		goto cleanup;
 
 	dict = PyDict_New(); 
-	PyObject *obj = PyString_FromString(user_name);
+	PyObject *obj = PyUnicode_FromString(user_name);
 	PyDict_SetItemString(dict, "name", obj);
 	Py_DECREF(obj);
 
@@ -290,7 +349,7 @@ static PyObject* get_user(const qpol_user_t * user_datum, const apol_policy_t * 
 		tmp = apol_mls_level_render(policydb, ap_lvl);
 		if (!tmp)
 			goto cleanup;
-		obj = PyString_FromString(tmp);
+		obj = PyUnicode_FromString(tmp);
 		PyDict_SetItemString(dict, "level", obj);
 		Py_DECREF(obj);
 		free(tmp);
@@ -301,7 +360,7 @@ static PyObject* get_user(const qpol_user_t * user_datum, const apol_policy_t * 
 		tmp = apol_mls_range_render(policydb, ap_range);
 		if (!tmp)
 			goto cleanup;
-		obj = PyString_FromString(tmp);
+		obj = PyUnicode_FromString(tmp);
 		PyDict_SetItemString(dict, "range", obj);
 		Py_DECREF(obj);
 		free(tmp);
@@ -319,7 +378,7 @@ static PyObject* get_user(const qpol_user_t * user_datum, const apol_policy_t * 
 			Py_DECREF(list);
 			goto cleanup;
 		}
-		PyObject *obj = PyString_FromString(role_name);
+		PyObject *obj = PyUnicode_FromString(role_name);
 		PyList_Append(list, obj);
 		Py_DECREF(obj);
 	}
@@ -409,7 +468,7 @@ static PyObject* get_role(const qpol_role_t * role_datum, const apol_policy_t * 
 	if (qpol_role_get_name(q, role_datum, &role_name))
 		goto cleanup;
 
-	PyObject *obj = PyString_FromString(role_name);
+	PyObject *obj = PyUnicode_FromString(role_name);
 	PyDict_SetItemString(dict, "name", obj);
 	Py_DECREF(obj);
 
@@ -424,7 +483,7 @@ static PyObject* get_role(const qpol_role_t * role_datum, const apol_policy_t * 
 				goto cleanup;
 			if (qpol_role_get_name(q, dom_datum, &role_name))
 				goto cleanup;
-			PyObject *obj = PyString_FromString(role_name);
+			PyObject *obj = PyUnicode_FromString(role_name);
 			PyList_Append(list, obj);
 			Py_DECREF(obj);
 		}
@@ -445,7 +504,7 @@ static PyObject* get_role(const qpol_role_t * role_datum, const apol_policy_t * 
 				goto cleanup;
 			if (qpol_type_get_name(q, type_datum, &type_name))
 				goto cleanup;
-			PyObject *obj = PyString_FromString(type_name);
+			PyObject *obj = PyUnicode_FromString(type_name);
 			PyList_Append(list, obj);
 			Py_DECREF(obj);
 		}
@@ -535,7 +594,7 @@ static PyObject*  get_ports(const char *num, const apol_policy_t * policydb)
 		}
 			
 		dict = PyDict_New(); 
-		obj = PyString_FromString(type);
+		obj = PyUnicode_FromString(type);
 		PyDict_SetItemString(dict, "type", obj);
 		Py_DECREF(obj);
 
@@ -547,19 +606,19 @@ static PyObject*  get_ports(const char *num, const apol_policy_t * policydb)
 		if (range_str == NULL) {
 			goto cleanup;
 		}
-		obj = PyString_FromString(range_str);
+		obj = PyUnicode_FromString(range_str);
 		PyDict_SetItemString(dict, "range", obj);
 		Py_DECREF(obj);
 
-		obj = PyString_FromString(proto_str);
+		obj = PyUnicode_FromString(proto_str);
 		PyDict_SetItemString(dict, "protocol", obj);
 		Py_DECREF(obj);
 
-		obj = PyInt_FromLong(high_port);
+		obj = PyLong_FromLong(high_port);
 		PyDict_SetItemString(dict, "high", obj);
 		Py_DECREF(obj);
 
-		obj = PyInt_FromLong(low_port);
+		obj = PyLong_FromLong(low_port);
 		PyDict_SetItemString(dict, "low", obj);
 		Py_DECREF(obj);
 
@@ -742,28 +801,24 @@ PyObject* seinfo(int type, const char *name)
 	return output;
 }
 
-PyObject *wrap_seinfo(PyObject *self, PyObject *args){
-    unsigned int type;
-    char *name;
-    
-    if (!PyArg_ParseTuple(args, "iz", &type, &name))
-        return NULL;
+#if PY_MAJOR_VERSION >= 3
+PyObject * PyInit__seinfo(void) {
+#else
+void init_seinfo() {
+#endif
 
-    return Py_BuildValue("O",seinfo(type, name));
-
-}
-
-static PyMethodDef methods[] = {
-    {"seinfo", (PyCFunction) wrap_seinfo, METH_VARARGS},
-    {NULL, NULL, 0, NULL}
-};
-
-void init_seinfo(){
-    PyObject *m;
-    m = Py_InitModule("_seinfo", methods);
+#if PY_MAJOR_VERSION >= 3
+    PyObject *m = PyModule_Create(&moduledef);
+#else
+    PyObject *m = Py_InitModule("_seinfo", methods);
+#endif
     PyModule_AddIntConstant(m, "ATTRIBUTE", ATTRIBUTE);
     PyModule_AddIntConstant(m, "PORT", PORT);
     PyModule_AddIntConstant(m, "ROLE", ROLE);
     PyModule_AddIntConstant(m, "TYPE", TYPE);
     PyModule_AddIntConstant(m, "USER", USER);
+
+#if PY_MAJOR_VERSION >= 3
+    return m;
+#endif
 }

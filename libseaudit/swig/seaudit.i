@@ -208,7 +208,7 @@ SWIGEXPORT int Tseaudit_Init(Tcl_Interp *interp) {
 }
 /* map string into C-style memory buffer */
 %typemap(in) (const char *buffer, const size_t bufsize) {
-	$1 = PyString_AsString($input);
+	$1 = PyBytes_AS_STRING(PyUnicode_AsEncodedString($input, "utf-8", "Error ~"));
 	$2 = (size_t) PyString_Size($input);
 }
 #endif
