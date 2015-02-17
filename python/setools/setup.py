@@ -7,8 +7,8 @@ LIBS=["apol", "qpol"]
 
 try:
     inc=os.getenv("INCLUDES").split(" ")    
-    INCLUDES=map(lambda x: x[2:], inc)
-    LIBDIRS=map(lambda x: "/".join(x.split("/")[:-1]), os.getenv("LIBS").split())
+    INCLUDES=[x[2:] for x in inc]
+    LIBDIRS=["/".join(x.split("/")[:-1]) for x in os.getenv("LIBS").split()]
 except:
     INCLUDES=""
     LIBDIRS=""
