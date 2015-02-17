@@ -29,7 +29,7 @@ $(wrappedso_DATA): $(BUILT_SOURCES)
 $(package_SCRIPTS): $(wrappedso_DATA)
 	echo "pkg_mkIndex . $^" | LD_LIBRARY_PATH=$(top_builddir)/libqpol/src:$(top_builddir)/libapol/src:$(top_builddir)/libsefs/src $(TCLSH_PROG)
 	chmod 644 $@
-	$(mkdir_p) sefs
+	$(MKDIR_P) sefs
 	cp $(wrappedso_DATA) $@ sefs
 
 MOSTLYCLEANFILES = $(BUILT_SOURCES) $(wrappedso_DATA) $(wrappedso_SONAME) $(short_name) $(package_DATA) sefs/$(wrappedso_DATA) sefs/$(package_SCRIPTS)

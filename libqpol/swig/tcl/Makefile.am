@@ -27,7 +27,7 @@ libdirs = $(top_builddir)/libqpol/src
 $(package_SCRIPTS): $(wrappedso_DATA)
 	echo "pkg_mkIndex . $^" | LD_LIBRARY_PATH=$(top_builddir)/libqpol/src $(TCLSH_PROG)
 	chmod 644 $@
-	$(mkdir_p) qpol
+	$(MKDIR_P) qpol
 	cp $(wrappedso_DATA) $@ qpol
 
 MOSTLYCLEANFILES = $(BUILT_SOURCES) $(wrappedso_DATA) $(wrappedso_SONAME) $(short_name) $(package_DATA) qpol/$(wrappedso_DATA) qpol/$(package_SCRIPTS)

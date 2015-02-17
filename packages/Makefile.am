@@ -20,9 +20,9 @@ $(pkgconfig_DATA): $(top_builddir)/config.status
 install-data-local:
 	if test $(copy_bwidget) = "yes"; then \
 		tar jxf BWidget-1.8.0.tar.bz2; \
-		test -z "$(bwidget_destdir)" || $(mkdir_p) "$(bwidget_destdir)" ;  \
+		test -z "$(bwidget_destdir)" || $(MKDIR_P) "$(bwidget_destdir)" ;  \
 		cd BWidget-1.8.0 ; \
-		find . -type d -exec $(mkdir_p) "$(bwidget_destdir)/{}" \; ; \
+		find . -type d -exec $(MKDIR_P) "$(bwidget_destdir)/{}" \; ; \
 		find . -type f -exec $(INSTALL_DATA) '{}' $(bwidget_destdir)/'{}' \; ; \
 	fi
 

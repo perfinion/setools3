@@ -94,7 +94,7 @@ $(wrappedso_DATA): apol_tcl.cc apol_tcl_wrap.cc
 
 $(package_SCRIPTS): $(wrappedso_DATA) mkIndex.tcl
 	cat mkIndex.tcl | LD_LIBRARY_PATH=$(top_builddir)/libqpol/src:$(top_builddir)/libapol/src:$(top_builddir)/libsefs/src $(TCLSH_PROG)
-	$(mkdir_p) apol_tcl
+	$(MKDIR_P) apol_tcl
 	cp $< $@ apol_tcl
 
 mkIndex.tcl: $(wrappedso_DATA) Makefile
